@@ -1,0 +1,384 @@
+--Yangi mijoz qo‘shish uchun Name va Email bilan stored procedure yozing.
+
+
+CREATE PROCEDURE AddCustomer
+    @Name VARCHAR(100),
+    @Email VARCHAR(100)
+
+AS
+BEGIN
+    -- Prevent inserting employees with duplicate names
+    IF EXISTS (SELECT 1 FROM Customers WHERE  Email = @Email)
+    BEGIN
+        PRINT 'This Email already exists!';
+        RETURN;
+    END
+
+    INSERT INTO Customers (Name, Email)
+    VALUES (@Name, @Email);
+
+    PRINT 'Customers Added Successfully!';
+END;
+
+EXEC AddCustomer 'abror', 'Abi@gamil.com'
+
+
+--Yangi mahsulot qo‘shish uchun Name va Price bilan stored procedure yozing.
+
+select * from Products
+
+CREATE PROCEDURE AddProduct
+    @Name VARCHAR(100),
+    @Price Decimal(10,2)
+
+AS
+Begin
+	If EXISTS(SELECT 1 FROM Products WHERE  Name = @Name)
+	Begin
+	PRINT 'This Product already exists!';
+        RETURN;
+	End
+
+	INSERT INTO Products (Name, Price)
+    VALUES (@Name, @Price);
+
+    PRINT 'Product Added Successfully!';
+
+End;
+
+EXEC AddProduct 'Car', 500000
+
+
+--Berilgan CustomerID uchun yangi buyurtma qo‘shish uchun stored procedure yozing.
+
+-- 3 Berilgan CustomerID uchun yangi buyurtma qo‘shish uchun stored procedure yozing.
+create procedure AddOrder
+  @CustomerId int,
+  @OrderDate DateTime
+As
+begin
+  if not exists (select 1 from Customers c where c.CustomerId = @CustomerId)
+  begin
+    print 'bunday foydalanuvchi yoq'
+    return;
+  end
+
+  insert into Orders (CustomerId, OrderDate)
+  values (@CustomerId, @OrderDate)
+end
+
+
+exec AddOrder 2, '2022-01-15'
+
+
+
+
+--Buyurtma elementi qo‘shish uchun OrderID, ProductID, Quantity va Price bilan stored procedure yozing.
+
+Create procedure AddOrderItems
+@OrderID int,
+@ProductID int,
+@Quantity int,
+@Price Decimal
+As
+Begin
+
+If not exists(select 1 from orders o where o.OrderID=@OrderID)
+begin
+    print 'bunday Order yoq'
+    return;
+end
+
+If not exists(select 1 from Products p where p.ProductID=@ProductID)
+begin
+    print 'bunday product yoq'
+    return;
+end
+insert into OrderItems  (OrderID ,ProductID , Quantity ,Price)
+Values (@OrderID ,@ProductID , @Quantity ,@Price)
+
+end;
+
+--Mijozni CustomerID bo‘yicha o‘chirish uchun stored procedure yozing. Agar mijozda buyurtmalar bo‘lsa, ularni ham o‘chiring.
+create procedure UpdateProductPrice
+@ProductID int,
+@NewPrice DECIMAL(10,2)
+AS
+
+begin
+if not exists(select 1 from Products p where p.ProductID=@ProductID)
+   begin
+    print 'bunday product topilmadi' 
+	return;
+   end
+
+      UPDATE Products
+        SET Price = @NewPrice
+        WHERE ProductID = @ProductID;
+
+        PRINT 'Mahsulot narxi muvaffaqiyatli yangilandi.';
+
+
+end
+
+--Mijozni CustomerID bo‘yicha o‘chirish uchun stored procedure yozing. Agar mijozda buyurtmalar bo‘lsa, ularni ham o‘chiring.
+
+CREATE PROCEDURE DeleteCustomer
+    @CustomerID INT
+AS
+BEGIN
+
+
+
+    IF not EXISTS (SELECT 1 FROM Customers WHERE CustomerID = @CustomerID)
+    BEGIN
+	  PRINT 'Xatolik: Bunday CustomerID topilmadi.';
+        
+    END
+
+        DELETE FROM Orders WHERE CustomerID = @CustomerID;
+
+        DELETE FROM Customers WHERE CustomerID = @CustomerID;
+
+        PRINT 'Mijoz va uning barcha buyurtmalari muvaffaqiyatli o‘chirildi.';
+END;
+
+
+--Buyurtmani OrderID bo‘yicha va uning barcha buyurtma elementlarini o‘chirish uchun stored procedure yozing.
+
+CREATE PROCEDURE DeleteOrder
+    @OrderID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Buyurtma mavjudligini tekshirish
+    IF EXISTS (SELECT 1 FROM Orders WHERE OrderID = @OrderID)
+    BEGIN
+        DELETE FROM OrderItems WHERE OrderID = @OrderID;
+
+        DELETE FROM Orders WHERE OrderID = @OrderID;
+
+        PRINT 'Buyurtma va uning barcha buyurtma elementlari muvaffaqiyatli o‘chirildi.';
+    END
+    ELSE
+    BEGIN
+        PRINT 'Xatolik: Bunday OrderID topilmadi.';
+    END
+END;
+
+
+
+
+--Mijozning buyurtma ma’lumotlarini olish uchun stored procedure yozing (INNER JOIN ishlating).
+
+CREATE PROCEDURE GetCustomerOrders
+    @CustomerID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Mijoz va uning buyurtmalari haqida ma'lumot olish
+    SELECT 
+        C.CustomerID,
+        C.Name,
+        O.OrderID,
+        O.OrderDate,
+        P.Name,
+        OI.Quantity,
+        OI.Price
+    FROM Customers C
+    INNER JOIN Orders O ON C.CustomerID = O.CustomerID
+    INNER JOIN OrderItems OI ON O.OrderID = OI.OrderID
+    INNER JOIN Products P ON OI.ProductID = P.ProductID
+    WHERE C.CustomerID = @CustomerID;
+END;
+
+
+
+
+--Barcha buyurtmalarni ularning buyurtma elementlari bilan olish uchun stored procedure yozing (LEFT JOIN ishlating).
+
+CREATE PROCEDURE GetAllOrdersWithItems
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+CREATE PROCEDURE GetAllOrdersWithItems
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+
+    SELECT 
+        O.OrderID,
+        O.CustomerID,
+        O.OrderDate,
+        OI.OrderItemID,
+        P.Name,
+        OI.Quantity,
+        OI.Price
+    FROM Orders O
+    LEFT JOIN OrderItems OI ON O.OrderID = OI.OrderID
+    LEFT JOIN Products P ON OI.ProductID = P.ProductID;
+END;
+
+
+
+--Barcha mahsulotlarni ularning buyurtma tafsilotlari bilan olish uchun stored procedure yozing (LEFT JOIN ishlating).
+
+CREATE PROCEDURE GetAllProductsWithOrderDetails
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        P.ProductID,
+        P.Name,
+        P.Price,
+        OI.OrderID,
+        O.OrderDate,
+        OI.Quantity
+    FROM Products P
+    LEFT JOIN OrderItems OI ON P.ProductID = OI.ProductID
+    LEFT JOIN Orders O ON OI.OrderID = O.OrderID;
+END;
+
+
+
+
+
+
+
+--Mijoz mavjudligini CustomerID orqali tekshirish uchun stored procedure yozing (IF EXISTS ishlating).
+
+create procedure CheakCustomer
+@CustomerID int
+
+as 
+Begin
+
+	IF Exists(Select 1 from Customers Where @CustomerID=CustomerID)
+	begin
+	   select * from Customers
+	   where CustomerID=@CustomerID
+	end
+
+	ELSE
+    BEGIN
+        PRINT 'Xatolik: Bunday Customer topilmadi.';
+    END
+end
+
+
+
+
+---Hech qachon buyurtma qilinmagan mahsulotlarni topish uchun stored procedure yozing.
+
+
+CREATE PROCEDURE GetUnsoldProducts
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        P.ProductID,
+        P.Name,
+        P.Price
+    FROM Products P
+    LEFT JOIN OrderItems OI ON P.ProductID = OI.ProductID
+    WHERE OI.ProductID IS NULL;
+END;
+
+
+
+
+
+Functiom---------------------------------
+
+
+
+--1. Berilgan CustomerID bo‘yicha mijozning email manzilini qaytaruvchi funksiya yozing.
+--Bu funksiya CustomerID ni qabul qilib, mijozning email manzilini qaytarishi kerak.
+
+CREATE FUNCTION GetCustomerEmail (@CustomerID INT)  
+RETURNS TABLE  
+AS  
+RETURN  
+(  
+    SELECT Email 
+    FROM Customers  
+    WHERE CustomerID = @CustomerID  
+);
+
+SELECT * FROM dbo.GetCustomerEmail(1);
+
+
+
+
+
+
+--4. Berilgan CustomerID bo‘yicha barcha buyurtmalarni qaytaruvchi funksiya yozing.
+--Funksiya jadval sifatida OrderID va OrderDate ustunlarini qaytarishi kerak.
+
+CREATE FUNCTION GetCustomerOrder (@CustomerID INT)  
+RETURNS TABLE  
+AS  
+RETURN  
+(  
+    SELECT OrderID, OrderDate, CustomerID  
+    FROM Orders  
+    WHERE CustomerID = @CustomerID  
+);
+
+SELECT * FROM dbo.GetCustomerOrder(1);
+
+
+--5. Eng qimmat mahsulotni qaytaruvchi funksiya yozing.
+--Bu funksiya ProductID, Name va Price ustunlarini qaytarishi kerak.
+
+CREATE FUNCTION GetExpensiveProduct()
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT TOP 1 ProductID, Name, Price
+    FROM Products
+    ORDER BY Price DESC
+);
+
+SELECT * FROM dbo.GetExpensiveProduct(@OrderID int);
+
+--6. Berilgan OrderID bo‘yicha barcha mahsulotlarni qaytaruvchi funksiya yozing.
+--Funksiya ProductID, Name, Quantity va Price ustunlarini qaytarishi kerak.
+
+CREATE FUNCTION GetOrderByID(@OrderID int)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT  ProductID, OrderID, Quantity, Price
+    FROM OrderItems
+	Where OrderID = @OrderID
+
+);
+SELECT * FROM dbo.GetOrderByID(2);
+
+
+
+
+--10. Berilgan OrderID bo‘yicha buyurtmada nechta turdagi mahsulot borligini qaytaruvchi funksiya yozing.
+--Funksiya OrderID ni qabul qilib, buyurtmada necha xil mahsulot borligini qaytarishi kerak.
+
+CREATE FUNCTION GetProductCountByOrder (@OrderID INT)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @ProductCount INT;
+    
+    SELECT @ProductCount = COUNT(DISTINCT ProductID)
+    FROM OrderItems
+    WHERE OrderID = @OrderID;
+    
+    RETURN @ProductCount;
+END
