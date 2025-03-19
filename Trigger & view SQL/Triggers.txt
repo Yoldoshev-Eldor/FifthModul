@@ -1,0 +1,113 @@
+-- Students Table
+CREATE TABLE Students (
+    StudentID INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(100),
+    Email NVARCHAR(100) UNIQUE
+);
+
+-- Professors Table
+CREATE TABLE Professors (
+    ProfessorID INT PRIMARY KEY IDENTITY,
+    Name NVARCHAR(100),
+    Department NVARCHAR(100)
+);
+
+-- Courses Table
+CREATE TABLE Courses (
+    CourseID INT PRIMARY KEY IDENTITY,
+    CourseName NVARCHAR(100),
+    ProfessorID INT FOREIGN KEY REFERENCES Professors(ProfessorID) ON DELETE CASCADE
+);
+
+-- Enrollments Table (Many-to-Many Relationship Between Students and Courses)
+CREATE TABLE Enrollments (
+    EnrollmentID INT PRIMARY KEY IDENTITY,
+    StudentID INT FOREIGN KEY REFERENCES Students(StudentID) ON DELETE CASCADE,
+    CourseID INT FOREIGN KEY REFERENCES Courses(CourseID) ON DELETE CASCADE,
+    EnrollmentDate DATE DEFAULT GETDATE()
+);
+
+-- AuditLog Table to Track Changes (No foreign keys, so no need for ON DELETE CASCADE)
+CREATE TABLE AuditLog (
+    AuditID INT PRIMARY KEY IDENTITY,
+    TableName NVARCHAR(100),
+    Operation NVARCHAR(50),
+    Description NVARCHAR(500),
+    Timestamp DATETIME DEFAULT GETDATE()
+);
+
+
+
+
+
+CREATE TRIGGER trg_AfterInsertStudent
+ON Students
+AFTER INSERT
+AS
+BEGIN
+  INSERT AuditLog(TableName,Operation,Description)
+  VALUES ('Students','Insert','Student inserted')
+END;
+
+
+
+
+CREATE TRIGGER trg_AfterDeleteStudent
+ON Students
+AFTER DELETE
+AS
+BEGIN 
+  INSERT AuditLOg(TableName,Operation,Description)
+  VALUES ('Students','Delete','Student deleted')
+END;
+
+
+CREATE TRIGGER trg_AfterUpdateStudent
+ON Students
+AFTER UPDATE
+AS
+BEGIN
+  INSERT AuditLOg(TableName,Operation,Description)
+  VALUES ('Students','Update','Student updated')
+END;
+
+
+
+CREATE TRIGGER trg_AfterInsertProfessors
+ON Professors
+AFTER INSERT
+AS
+BEGIN
+  INSERT AuditLog(TableName,Operation,Description)
+  VALUES ('Professors','Insert','Professor inserted')
+END;
+
+
+
+
+CREATE TRIGGER trg_AfterDeleteProfessors
+ON Professors
+AFTER DELETE
+AS
+BEGIN 
+  INSERT AuditLOg(TableName,Operation,Description)
+  VALUES ('Professors','Delete','Professors deleted')
+END;
+
+
+CREATE TRIGGER trg_AfterUpdateProfessors
+ON Professors
+AFTER UPDATE
+AS
+BEGIN
+  INSERT AuditLOg(TableName,Operation,Description)
+  VALUES ('Professors','Update','Professors updated')
+END;
+
+insert into Students(Name,Email)
+values
+('aaa','uygtfchg'),
+('aaa','uygtfg'),
+('aaa','uygthg');
+
+select * from AuditLog
