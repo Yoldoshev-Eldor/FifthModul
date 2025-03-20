@@ -111,3 +111,23 @@ values
 ('aaa','uygthg');
 
 select * from AuditLog
+
+
+
+
+
+
+
+Create nonclustered index IX_Students_Email_NC
+on Students (Email)
+Select * from Students
+Create nonclustered index IX_users_Email_NC
+on users (Email)
+
+CREATE TABLE users (
+    StudentID INT PRIMARY KEY ,
+    Email NVARCHAR(100) UNIQUE
+);
+
+Insert into users(StudentID,Email)
+Values(1,'wertyuio')
